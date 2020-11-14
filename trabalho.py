@@ -1,7 +1,10 @@
+import csv
+import argparse
 
 class GLUD:
     
-    def __init__(self, file_name):
+    def __init__(self):
+        file_name = self.parse_args()
         lines = self.get_lines(file_name)
         equals_pos = lines[0].find('=')
         # Esta no primeiro estado
@@ -13,10 +16,74 @@ class GLUD:
         self.prog, lines[0] = self.read_string(lines[0])
         lines[0] = lines[0].strip()
         self.initial_symbol, lines[0] = self.read_string(lines[0])
-        lines[0] = lines[0][1:].strip()
+        lines[0] = lines[0].strip()[1:].strip()
         self.final_states, lines[0] = self.read_curly_braces(lines[0])
         self.prod = self.read_function(lines)
         self.empty_prod()
+
+    def parse_args(self):
+      ''' Parses CLI args, DFA definition'''
+      parser = argparse.ArgumentParser(description="Creates a grammar from a DFA")
+      parser.add_argument("DFA", metavar="DFA", type=str, help="File to read DFA")
+      return parser.parse_args().DFA
+
+    def read_csv(self, file_name):
+      word_list = []
+      try:
+        with open(file_name) as file:
+          word_list = file.read()
+          word_list = word_list.split(',')
+        word_list = [i.strip()[1:-1] for i in word_list]
+        self.list_words(word_list)
+      except:
+        print("Couldn't open file")
+        
+    def shell(self):
+        while(True):
+            string = input("$ ")
+            if string == 'exit':
+                break
+            else:
+                lst = string.split(' ')
+                if len(lst) == 2 and lst[0] == 'word':
+                    self.word(lst[1])
+                elif len(lst) == 2 and lst[0] == 'list':
+                    self.read_csv(lst[1])
+                else:
+                    print("INVALID COMMAND")
+            
+    def word(self, word):
+        accepted, derivation = self.check_word(word)
+        if not accepted:
+            print("Palavra não aceita")
+        else:
+            print("Palavra aceita")
+            print("Derivação: ")
+            self.print_derivation(derivation)
+
+    def list_words(self, word_list):
+        accepted_list = []
+        rejected_list = []
+        for word in word_list:
+            accepted, derivation = self.check_word(word)
+            if accepted:
+                accepted_list.append(word)
+            else:
+                rejected_list.append(word)
+        print("ACEITA:")
+        for i in accepted_list:
+            print(i)
+        print()
+        print("REJEITA")
+        for i in rejected_list:
+          print(i)
+
+    def print_derivation(self, derivation):
+        print(derivation[0][0],end = '')
+        for val in derivation[1:]:
+            temp = "".join(val)
+            print(f"->{temp}",end = '')
+        print()
 
     def check_word(self, word):
         symbol_list = self.parse_word(word)
@@ -53,9 +120,7 @@ class GLUD:
         if not found:
            return False, None
         return True, derivation 
-            
                 
-         
     def parse_word(self, word):
         lst = []
         string = ""
@@ -172,16 +237,5 @@ class GLUD:
         return string.strip(), line[i:]
 
 
-glud = GLUD('formato_entrada.txt')
-print(glud.prod)
-
-print(glud.check_word("R$1.00R$1.00R$1.00")[1])
-print(glud.check_word("R$1.00R$5.00")[1])
-print(glud.check_word("R$2.00R$2.00R$5.00")[1])
-print(glud.check_word("R$2.00R$5.00R$5.00")[1])
-print(glud.check_word("R$5.00R$5.00R$5.00")[1])
-print(glud.check_word("R$0.50R$1.00R$1.00R$1.00")[1])
-print(glud.check_word("R$0.50R$1.00R$5.00")[1])
-print(glud.check_word("R$0.50R$2.00R$2.00R$5.00")[1])
-print(glud.check_word("R$0.50R$2.00R$5.00R$5.00")[1])
-print(glud.check_word("R$0.50R$5.00R$5.00R$5.00")[1])
+glud = GLUD()
+glud.shell()
