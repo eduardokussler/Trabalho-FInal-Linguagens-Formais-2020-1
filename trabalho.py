@@ -3,6 +3,7 @@ import argparse
 
 class GLUD:
     
+    # Construtor da classe
     def __init__(self):
         file_name = self.parse_args()
         lines = self.get_lines(file_name)
@@ -27,6 +28,7 @@ class GLUD:
       parser.add_argument("DFA", metavar="DFA", type=str, help="File to read DFA")
       return parser.parse_args().DFA
 
+    # Le o arquivo CSV dado com a lista de palavras
     def read_csv(self, file_name):
       word_list = []
       try:
@@ -37,7 +39,11 @@ class GLUD:
         self.list_words(word_list)
       except:
         print("Couldn't open file")
-        
+
+    # Inicializa interface shell para execucao dos comandos
+    # - exit: sai do programa
+    # - word: le uma palavra via input
+    # - list: le uma lista de palavras dada atraves de um caminho para um arquivo CSV    
     def shell(self):
         while(True):
             string = input("$ ")
@@ -51,7 +57,10 @@ class GLUD:
                     self.read_csv(lst[1])
                 else:
                     print("INVALID COMMAND")
-            
+
+    # Verifica se a palavra faz parte da linguagem de entrada
+    # Se a palavra for aceita printa uma mensagem de aceitação 
+    # e a respectiva derivação       
     def word(self, word):
         accepted, derivation = self.check_word(word)
         if not accepted:
@@ -61,6 +70,9 @@ class GLUD:
             print("Derivação: ")
             self.print_derivation(derivation)
 
+    # Verifica se as palavras de uma dada lista de palavras (CSV file)
+    # são aceitas ou rejeitadas pela linguagem. Printa os conjuntos
+    # ACEITA e REJEITA da linguagem
     def list_words(self, word_list):
         accepted_list = []
         rejected_list = []
@@ -78,6 +90,7 @@ class GLUD:
         for i in rejected_list:
           print(i)
 
+    # Printa a derivação da palavra dada como entrada
     def print_derivation(self, derivation):
         print(derivation[0][0],end = '')
         for val in derivation[1:]:
@@ -85,6 +98,7 @@ class GLUD:
             print(f"->{temp}",end = '')
         print()
 
+    # verifica se a palavra pertence a linguagem gerada pela gramnatica?
     def check_word(self, word):
         symbol_list = self.parse_word(word)
         not_symbols = [i for i in symbol_list if i not in self.alphabet]
@@ -134,12 +148,14 @@ class GLUD:
             lst.append(string)
         return lst
 
+    # Define a lista de produções vazias
     def empty_prod(self):
         for state in self.final_states:
             if not self.prod.get(state):
                 self.prod[state] = []
             self.prod[state].append(('',''))
 
+    # Le a funcao programa realizando os tratamentos necessarios de string
     def read_function(self,lines):
         lines = lines[2:]
         prod = {}
@@ -186,12 +202,14 @@ class GLUD:
                 
         return prod
 
+    # Salba as linhas do arquivo
     def get_lines(self, file_name):
         ''' Given a file, returns a list where each element is the corresponding line of the file'''
         with open(file_name) as input_file: # with automatically closes file
             lines = input_file.read().splitlines()
             return lines
 
+    # Le caracteres que estão entre chaves
     def read_curly_braces(self, line):
         end_curly = False
         string = ""
@@ -217,6 +235,7 @@ class GLUD:
 
         return lst, line[i:]
 
+    # Le uma string verificando caracteres especiais
     def read_string(self, line):
         end_string = False
         string = ""
