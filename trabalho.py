@@ -9,11 +9,11 @@ class GLUD:
         lines = self.get_lines(file_name)
         equals_pos = lines[0].find('=')
         # Esta no primeiro estado
-        lines[0] = lines[0][equals_pos+1:].strip()[1:].strip()[1:]
+        lines[0] = lines[0][equals_pos+1:].strip()[1:].strip()[1:].strip()
         self.variables, lines[0] = self.read_curly_braces(lines[0])
-        lines[0] = lines[0][1:].strip()[1:].strip()
+        lines[0] = lines[0].strip()[1:].strip()[1:].strip()
         self.alphabet, lines[0] = self.read_curly_braces(lines[0])
-        lines[0] = lines[0][1:].strip()
+        lines[0] = lines[0].strip()[1:].strip()
         self.prog, lines[0] = self.read_string(lines[0])
         lines[0] = lines[0].strip()
         self.initial_symbol, lines[0] = self.read_string(lines[0])
@@ -144,11 +144,13 @@ class GLUD:
             if string == 'exit':
                 break
             else:
-                lst = string.split(' ')
-                if len(lst) == 2 and lst[0] == 'word':
-                    self.word(lst[1])
-                elif len(lst) == 2 and lst[0] == 'list':
-                    self.read_csv(lst[1])
+                pos_space = string.find(' ')
+                command = string[:pos_space]
+                arg = string[pos_space:].strip().split(' ')
+                if len(arg) == 1 and command == 'word':
+                    self.word(arg[0])
+                elif len(arg) == 1 and command == 'list':
+                    self.read_csv(arg[0])
                 else: # se o usuario digitar um com mais argumentos do que o necessario, considera um comando invalido
                     print("INVALID COMMAND")
 
@@ -177,12 +179,37 @@ class GLUD:
       word_list = []
       try:
         with open(file_name) as file:
-          word_list = file.read()
-          word_list = word_list.split(',')
-        word_list = [i.strip()[1:-1] for i in word_list]
+            word_list = file.read()
+            word_list = self.read_word_list(word_list)
         self.list_words(word_list)
       except:
         print("Couldn't open file")
+    
+    # Le a string com as palavras do csv e retorna uma lista com essas palavras
+    def read_word_list(self, word_list):
+        lst = []
+        i = 0
+        while word_list != '': # loop para ler a string com as palavras
+            # Encontra a posição das primeiras aspas
+            pos_beg = word_list.find('''"''')
+            # retira as primeiras aspas da string
+            word_list = word_list[pos_beg+1:]
+            pos_end = word_list.find('''"''')
+            string = ""
+            # Se o caractere anterior as aspas for uma \
+            # significa que a quote faz parte da palavra e não 
+            # representa o fim da palavra
+            while pos_end - 1 >= 0 and word_list[pos_end - 1] == '\\': # loop para ler os quotes da palavra
+                string += word_list[:pos_end - 1] + word_list[pos_end]
+                word_list = word_list[pos_end+1:]
+                pos_end = word_list.find('''"''')
+
+            string += word_list[:pos_end]
+            lst.append(string)
+            word_list = word_list[pos_end+1:]
+        
+        return lst
+        
 
     # Verifica se as palavras de uma dada lista de palavras (CSV file)
     # são aceitas ou rejeitadas pela linguagem. Printa os conjuntos
