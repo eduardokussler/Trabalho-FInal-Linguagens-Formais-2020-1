@@ -5,21 +5,28 @@ class GLUD:
     
     # Construtor da classe
     def __init__(self):
+        # le o arquivo com a definição
         file_name = self.parse_args()
         lines = self.get_lines(file_name)
+        # le os estados, que serão as variaveis da gramatica
         equals_pos = lines[0].find('=')
-        # Esta no primeiro estado
         lines[0] = lines[0][equals_pos+1:].strip()[1:].strip()[1:].strip()
-        self.variables, lines[0] = self.read_curly_braces(lines[0])
+        self.variables, lines[0] = self.read_until_end_char(lines[0],'}')
+        # le o alfabeto, que serão os simbolos terminais da gramatica
         lines[0] = lines[0].strip()[1:].strip()[1:].strip()
-        self.alphabet, lines[0] = self.read_curly_braces(lines[0])
+        self.alphabet, lines[0] = self.read_until_end_char(lines[0],'}')
         lines[0] = lines[0].strip()[1:].strip()
+        # le o nome da fução programa
         self.prog, lines[0] = self.read_string(lines[0])
         lines[0] = lines[0].strip()
+        # le o simbolo inicial
         self.initial_symbol, lines[0] = self.read_string(lines[0])
         lines[0] = lines[0].strip()[1:].strip()
-        self.final_states, lines[0] = self.read_curly_braces(lines[0])
+        # le os estados finais
+        self.final_states, lines[0] = self.read_until_end_char(lines[0],'}')
+        # cria as produções do automato lendo a função
         self.prod = self.read_function(lines)
+        # coloca as produções vazias necessarias na transformação para gramatica
         self.empty_prod()
 
     # Retorna o nome do arquivo que foi passado como argumento na linha de comando
@@ -34,24 +41,24 @@ class GLUD:
             lines = input_file.read().splitlines()
             return lines
 
-    # Le caracteres que estão entre chaves
-    def read_curly_braces(self, line):
-        end_curly = False
+    # Le caracteres até marcador de fim
+    def read_until_end_char(self, line, end_char):
+        end_string = False
         string = ""
         lst = []
         i = 0
-        while(not end_curly):
+        while(not end_string and i < len(line)): # enquanto não encontrar o marcador le o proximo simbolo
             symbol = line[i]
-            if(line[i] != '\\'):
-                if(line[i] == ','):
+            if(line[i] != '\\'): # se não é barra 
+                if(line[i] == ','): # verifica se for virgula para colocar a string atual na lista e reseta a string
                     lst.append(string.strip())
                     string = ""
-                elif(line[i] == '}'):
+                elif(line[i] == end_char): # se é o marcador coloca o que tem atualmente na lista para terminar o loop
                     lst.append(string.strip())
-                    end_curly = True
-                else:
+                    end_string = True
+                else: # se é um caractere normal adiciona a string
                     string += symbol
-            else:
+            else: # se é uma barra, adiciona o proximo caractere independente do que ele é
                 i += 1
                 symbol = line[i]
                 string += symbol
@@ -65,14 +72,14 @@ class GLUD:
         end_string = False
         string = ""
         i = 0
-        while(not end_string):
+        while(not end_string and i < len(line)): # enquanto não termina a string ou não encontra o marcador(',') le a string
             symbol = line[i]
-            if(line[i] != '\\'):
+            if(line[i] != '\\'): # se não for barra verifica se é a virgula para  terminar a leitura, e se não for virgula le o simbolo
                 if(line[i] == ','):
                     end_string = True
                 else:
                     string += symbol
-            else:
+            else: # se é uma barra le o proximo simbolo
                 i += 1
                 symbol = line[i]
                 string += symbol
@@ -84,44 +91,15 @@ class GLUD:
     def read_function(self,lines):
         lines = lines[2:]
         prod = {}
-        for line in lines:
+        for line in lines: #loop para cada (< qi >, < si >) = < qj > da função
+            # leitura de (< qi >, < si >)
             line = line.strip()[1:].strip()
-            end_string = False
-            lst = []
-            string = ""
-            i = 0
-            
-            while(not end_string):
-              symbol = line[i]
-              if(line[i] != '\\'):
-                  if(line[i] == ','):
-                      lst.append(string.strip())
-                      string = ""
-                  elif(line[i] == ')'):
-                      lst.append(string.strip())
-                      end_string = True
-                  else:
-                      string += symbol
-              else:
-                  i += 1
-                  symbol = line[i]
-                  string += symbol
-              i += 1
-            line = line.strip()[i+1:].strip()
-            i = 0
-            string = ""
-            while(len(line[i:]) != 0):
-                symbol = line[i]
-                if(line[i] != '\\'):
-                    string += symbol
-                else:
-                    i += 1
-                    symbol = line[i]
-                    string += symbol
-
-                i += 1
-            lst.append(string.strip())
-            if not prod.get(lst[0]):
+            lst, line = self.read_until_end_char(line,')')  
+            line = line.strip()[1:].strip()
+            # leitura de < qj >
+            lst.append(self.read_string(line)[0])
+            # adiciona a produção < qi > -> < si >< qj >
+            if not prod.get(lst[0]): # se a lista de produções de < qi > está vazia cria a lista
                 prod[lst[0]] = []
             prod[lst[0]].append((lst[1],lst[2]))
                 
@@ -234,40 +212,44 @@ class GLUD:
 
     # verifica se a palavra pertence a linguagem gerada pela gramnatica?
     def check_word(self, word):
+        # separa a palavra em uma lista de simbolos
         symbol_list = self.parse_word(word)
+        # se algum dos simbolos não pertence ao alfabeto, rejeita a palavra
         not_symbols = [i for i in symbol_list if i not in self.alphabet]
         if not_symbols:
             return False, None
-        derivation = [[self.initial_symbol]]
-            
-        for symbol in symbol_list:
+
+        derivation = [[self.initial_symbol]] # inicia com o simbolo inicial    
+        for symbol in symbol_list: # le os simbolos da palavra 
+            # procura a lista de produções do simbolo, se não encontrar então a palavra não é rejeitada
             prod_list = self.prod.get(derivation[-1][-1])
             if not prod_list:
                 return False, None
+            # busca na lista de produções uma produção para gerar o simbolo atual    
             found = False
             for i,j in prod_list:
-                if i == symbol:
-                    temp = derivation[-1][:-1]
-                    temp.append(i)
-                    temp.append(j)
-                    derivation.append(temp)
+                if i == symbol: # simbolo encontrado, coloca um novo passo da derivação
+                    derivation.append(derivation[-1][:-1] + [i, j])
                     found = True 
                     break
-            if not found:
+            if not found: # simbolo não encontrado e portanto a palavra deve ser rejeitada
                return False, None
-    
+
+        # busca para a variavel mais a direita se há porduções dela, se não houver então a palavra é rejeitada
         prod_list = self.prod.get(derivation[-1][-1])
         if not prod_list:
             return False, None
+        # se há produções, busca se há a produção vazia    
         found = False
         for i,j in prod_list:
-            if i == '':
-                derivation.append(derivation[-1][:][:-1])
+            if i == '': # encontrou a produção vazia
+                derivation.append(derivation[-1][:][:-1]) # coloca um novo passo da derivação
                 found = True 
                 break
-        if not found:
+        if not found: # não encontrou, portanto a palavra não é reconhecida
            return False, None
-        return True, derivation 
+        else: # encontrou retorna a palavra e a derivação
+           return True, derivation 
     
     # Faz o parse da palavra, como um simbolo pode ter mais de um caractere coloca cada simbolo da palavra em uma lista
     def parse_word(self, word):
