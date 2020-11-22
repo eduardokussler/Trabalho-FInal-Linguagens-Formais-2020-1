@@ -46,8 +46,6 @@ Sendo que o arquivo CSV deve ter o seguinte formato:
 As palavras testadas pelo programa, usando o comando list ou word, podem conter uma contrabarra que funciona como na leitura da definição do automato.
 
 '''
-
-
 import csv
 import argparse
 
@@ -193,12 +191,19 @@ class GLUD:
             if not self.prod.get(state): # se não há nenhuma produção com o estado F, cria a lista de produções
                 self.prod[state] = []
             self.prod[state].append(('','')) # adiciona a produção com ε como uma tupla ('','')
-
-    # Inicializa interface shell para execucao dos comandos
-    # - exit: sai do programa
-    # - word: le uma palavra via input
-    # - list: le uma lista de palavras dada atraves de um caminho para um arquivo CSV    
+  
     def shell(self):
+        '''
+        Inicializa interface shell para execução dos comandos
+            # - exit: sai do programa
+            # - word "<palavra>": le uma palavra via input
+            # - list <caminho>: le uma lista de palavras dada atraves de um caminho para um arquivo CSV
+        Sendo que o arquivo CSV deve ter o seguinte formato:
+        "<p1>","<p2>",....,"<pn>"
+
+        As palavras testadas pelo programa, usando o comando list ou word, podem conter uma contrabarra que funciona como 
+        na leitura da definição do automato.
+        '''
         while(True):
             string = input("$ ").strip()
             if string == 'exit':
@@ -211,13 +216,14 @@ class GLUD:
                     self.word(self.read_string(arg[0][1:-1],'')[0])
                 elif len(arg) == 1 and command == 'list':
                     self.read_csv(arg[0])
-                else: # se o usuario digitar um com mais argumentos do que o necessario, considera um comando invalido
+                else: # se o usuario digitar um comando mais argumentos do que o necessario, considera como um comando invalido
                     print("INVALID COMMAND")
 
-    # Verifica se a palavra faz parte da linguagem de entrada
-    # Se a palavra for aceita printa uma mensagem de aceitação 
-    # e a respectiva derivação       
     def word(self, word):
+        '''
+        Verifica se a palavra faz parte da linguagem de entrada Se a palavra for aceita printa uma mensagem de aceitação 
+        e a respectiva derivação.  
+        '''
         accepted, derivation = self.check_word(word)
         if not accepted:
             print("Palavra não aceita")
@@ -225,17 +231,72 @@ class GLUD:
             print("Palavra aceita")
             print("Derivação: ")
             self.print_derivation(derivation)
+
+    def check_word(self, word):
+        '''
+        Verifica se a palavra pertence a linguagem gerada pela gramatica.
+        Retorna uma tupla com:
+
+            Um booleano indicando se a palavra é gerada pela gramatica;
+            A derivação da palavra.
+
+        Caso a palavra não possa ser derivada, retorna None em vez de retornar a derivação.
+        '''
+        symbol_list = self.parse_word(word) # separa a palavra em uma lista de simbolos
+        # se algum dos simbolos não pertence ao alfabeto, rejeita a palavra
+        not_symbols = [i for i in symbol_list if i not in self.alphabet]
+        if not_symbols:
+            return False, None
+
+        symbol_list.append('') # coloca '' para quando a palavra original for lida verificar se é possivel gerar a palavra vazia com a ultima variavel
+        derivation = [[self.initial_symbol]] # inicia a derivação com o simbolo inicial    
+        for symbol in symbol_list: # le os simbolos da palavra 
+            # procura a lista de produções da variavel, se não encontrar então a palavra é rejeitada
+            prod_list = self.prod.get(derivation[-1][-1])
+            if not prod_list:
+                return False, None
+            # busca na lista de produções uma produção para gerar o simbolo atual    
+            found = False
+            for i,j in prod_list:
+                if i == symbol: # simbolo encontrado, coloca um novo passo da derivação
+                    derivation.append(derivation[-1][:-1] + [i, j])
+                    found = True 
+                    break
+            if not found: # simbolo não encontrado e portanto a palavra deve ser rejeitada
+               return False, None
+
+        return True, derivation
     
-    # Printa a derivação da palavra dada como entrada
+    def parse_word(self, word):
+        '''
+        Faz o parse da palavra, como um simbolo pode ter mais de um caractere coloca cada simbolo da palavra em uma lista.
+        Retorna uma lista com os simbolos da palavra.
+        '''
+        lst = []
+        string = ""
+        for c in word: 
+            # Para cada caractere na palavra le o caractere, adiciona a string atual, e verifica se a string atual é um simbolo do alfabeto
+            # Se for, adiciona a string na lista de simbolos da palavra e zera a string
+            # Se não for, continua lendo caracteres até que encontre um simbolo do alfabeto
+            string += c
+            if(string in self.alphabet):
+              lst.append(string)
+              string = ""
+        # se terminou de ler a palavra e o conjunto de caracteres final não representa um simbolo, coloca a string atual como simbolo na lista
+        if string != "":
+            lst.append(string)
+        return lst
+    
     def print_derivation(self, derivation):
+        '''Printa a derivação da palavra dada como entrada.'''
         print(derivation[0][0],end = '')
         for val in derivation[1:]:
             temp = "".join(val)
             print(f"->{temp}",end = '')
         print()
 
-    # Le o arquivo CSV dado com a lista de palavras
     def read_csv(self, file_name):
+      '''Le o arquivo CSV dado com a lista de palavras. Imprime o conjunto das palavras aceitas e rejeitadas'''
       word_list = []
       try:
         with open(file_name) as file:
@@ -245,20 +306,19 @@ class GLUD:
       except:
         print("Couldn't open file")
     
-    # Le a string com as palavras do csv e retorna uma lista com essas palavras
     def read_word_list(self, word_list):
+        '''Le a string com as palavras do csv e retorna uma lista com essas palavras.'''
         lst = []
-        i = 0
         while word_list != '': # loop para ler a string com as palavras
             # Encontra a posição das primeiras aspas
             pos_beg = word_list.find('''"''')
             # retira as primeiras aspas da string
             word_list = word_list[pos_beg+1:]
-            pos_end = word_list.find('''"''')
-            string = ""
             # Se o caractere anterior as aspas for uma \
             # significa que a quote faz parte da palavra e não 
             # representa o fim da palavra
+            string = ""
+            pos_end = word_list.find('''"''')
             while pos_end - 1 >= 0 and word_list[pos_end - 1] == '\\': # loop para ler os quotes da palavra
                 string += word_list[:pos_end - 1] + word_list[pos_end]
                 word_list = word_list[pos_end+1:]
@@ -270,10 +330,12 @@ class GLUD:
         
         return [self.read_string(i, '')[0] for i in lst]
 
-    # Verifica se as palavras de uma dada lista de palavras (CSV file)
-    # são aceitas ou rejeitadas pela linguagem. Printa os conjuntos
-    # ACEITA e REJEITA da linguagem
     def list_words(self, word_list):
+        '''
+        Verifica se as palavras de uma dada lista de palavras
+        são aceitas ou rejeitadas pela linguagem. Printa os conjuntos
+        ACEITA e REJEITA da linguagem.
+        '''
         accepted_list = []
         rejected_list = []
         for word in word_list: # loop para verificar cada palavra da lista
@@ -290,64 +352,6 @@ class GLUD:
         print("REJEITA")
         for i in rejected_list:
           print(i)
-
-    # verifica se a palavra pertence a linguagem gerada pela gramnatica?
-    def check_word(self, word):
-        # separa a palavra em uma lista de simbolos
-        symbol_list = self.parse_word(word)
-        # se algum dos simbolos não pertence ao alfabeto, rejeita a palavra
-        not_symbols = [i for i in symbol_list if i not in self.alphabet]
-        if not_symbols:
-            return False, None
-
-        derivation = [[self.initial_symbol]] # inicia com o simbolo inicial    
-        for symbol in symbol_list: # le os simbolos da palavra 
-            # procura a lista de produções do simbolo, se não encontrar então a palavra não é rejeitada
-            prod_list = self.prod.get(derivation[-1][-1])
-            if not prod_list:
-                return False, None
-            # busca na lista de produções uma produção para gerar o simbolo atual    
-            found = False
-            for i,j in prod_list:
-                if i == symbol: # simbolo encontrado, coloca um novo passo da derivação
-                    derivation.append(derivation[-1][:-1] + [i, j])
-                    found = True 
-                    break
-            if not found: # simbolo não encontrado e portanto a palavra deve ser rejeitada
-               return False, None
-
-        # busca para a variavel mais a direita se há porduções dela, se não houver então a palavra é rejeitada
-        prod_list = self.prod.get(derivation[-1][-1])
-        if not prod_list:
-            return False, None
-        # se há produções, busca se há a produção vazia    
-        found = False
-        for i,j in prod_list:
-            if i == '': # encontrou a produção vazia
-                derivation.append(derivation[-1][:][:-1]) # coloca um novo passo da derivação
-                found = True 
-                break
-        if not found: # não encontrou, portanto a palavra não é reconhecida
-           return False, None
-        else: # encontrou retorna a palavra e a derivação
-           return True, derivation 
-    
-    # Faz o parse da palavra, como um simbolo pode ter mais de um caractere coloca cada simbolo da palavra em uma lista
-    def parse_word(self, word):
-        lst = []
-        string = ""
-        for c in word: 
-            # Para cada caractere na palavra le o caractere, adiciona a string atual, e verifica se a string atual é um simbolo do alfabeto
-            # Se for, adiciona a string na lista de simbolos da palavra e zera a string
-            # Se não for, continua lendo caracteres até que encontre um simbolo do alfabeto
-            string += c
-            if(string in self.alphabet):
-              lst.append(string)
-              string = ""
-        # se terminou de ler a palavra e o conjunto de simbolos final não representa um simbolo, coloca a string atual como simbolo na lista
-        if string != "":
-            lst.append(string)
-        return lst
 
 
 glud = GLUD() # cria a gramatica a partir do arquivo com a definição do automato
