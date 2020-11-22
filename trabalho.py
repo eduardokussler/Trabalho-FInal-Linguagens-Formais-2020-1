@@ -47,6 +47,7 @@ Sendo que o arquivo CSV deve ter o seguinte formato:
 
 As palavras testadas pelo programa, usando o comando list ou word, podem conter uma contrabarra que funciona como na leitura da definição do automato.
 A palavra vazia pode ser testada usando "".
+Se uma palavra contem simbolos que não pertencem a lista de simbolos da linguagem, ela será rejeitada.
 
 '''
 import csv
