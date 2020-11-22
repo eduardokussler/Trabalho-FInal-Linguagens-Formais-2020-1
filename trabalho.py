@@ -68,14 +68,14 @@ class GLUD:
         return lst, line[i:]
 
     # Le uma string verificando caracteres especiais
-    def read_string(self, line):
+    def read_string(self, line,separator = ','):
         end_string = False
         string = ""
         i = 0
         while(not end_string and i < len(line)): # enquanto não termina a string ou não encontra o marcador(',') le a string
             symbol = line[i]
-            if(line[i] != '\\'): # se não for barra verifica se é a virgula para  terminar a leitura, e se não for virgula le o simbolo
-                if(line[i] == ','):
+            if(line[i] != '\\'): # se não for barra verifica se é o separador para  terminar a leitura, e se não for o separador le o simbolo
+                if(line[i] == separator):
                     end_string = True
                 else:
                     string += symbol
@@ -126,7 +126,7 @@ class GLUD:
                 command = string[:pos_space]
                 arg = string[pos_space:].strip().split(' ')
                 if len(arg) == 1 and command == 'word':
-                    self.word(arg[0])
+                    self.word(self.read_string(arg[0][1:-1],'')[0])
                 elif len(arg) == 1 and command == 'list':
                     self.read_csv(arg[0])
                 else: # se o usuario digitar um com mais argumentos do que o necessario, considera um comando invalido
@@ -186,8 +186,7 @@ class GLUD:
             lst.append(string)
             word_list = word_list[pos_end+1:]
         
-        return lst
-        
+        return [self.read_string(i, '')[0] for i in lst]
 
     # Verifica se as palavras de uma dada lista de palavras (CSV file)
     # são aceitas ou rejeitadas pela linguagem. Printa os conjuntos
