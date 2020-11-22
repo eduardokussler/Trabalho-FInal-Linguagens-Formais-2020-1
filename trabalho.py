@@ -8,6 +8,8 @@ Thiago Sotoriva Lermen (313020)
 Turma: B
 Professor: Lucio Mauro Duarte
 
+Para executar o programa use: python3 trabalho.py <arquivo_definicao_AFD>
+
 O programa recebe por linha de comando o caminho para um arquivo com a definição de um AFD no seguinte formato:
 
 <M>=({<q0>,...,<qn>},{<s1>,...,<sn>},Prog,<ini>,{ <f0>,...,<fn>})
@@ -27,9 +29,9 @@ sendo que f i é um estado do autômato;
 (< qi >, < si >) = < qj >: descreve a função programa aplicada a um estado qi e um
 símbolo de entrada si que leva a computação a um estado qj.
 
-Sendo que se algum dos caracteres usados como separador na definição ('=', '(', ')', '{', '}', ',') é usado como um simbolo/estado deve ser usado
-uma contrabarra ('\') antes do simbolo para ele ser lido corretamente como um simbolo/estado na definição, já que foi definido que sempre que for
-encontrada uma contrabarra na leitura o próximo simbolo será lido como sendo parte da string. 
+Sendo que se algum dos caracteres usados como separador na definição ('=', '(', ')', '{', '}', ',') é usado como um simbolo/estado/nome deve ser usado
+uma contrabarra ('\') antes dele para garantir que ele seja lido corretamente na definição, já que foi definido que sempre que for encontrada uma 
+contrabarra na leitura o próximo simbolo será lido como sendo parte da string. 
 
 O programa então constroi uma gramática linear unitária à direita equivalente a esse automato, sendo que diferente do algoritmo mostrado em 
 aula, e semelhante à forma como o JFLAP faz a conversão, não é criado um simbolo novo S para ser usado como simbolo inicial, já que esse
