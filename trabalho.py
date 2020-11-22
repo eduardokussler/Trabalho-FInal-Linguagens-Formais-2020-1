@@ -1,53 +1,139 @@
+'''
+Trabalho final (ETAPA 2) - Linguagens Formais e Autômatos
+
+Grupo: 
+Eduardo Eugênio Kussler (315799), 
+Gabriel Couto Domingues (302229), 
+Thiago Sotoriva Lermen (313020)
+Turma: B
+Professor: Lucio Mauro Duarte
+
+O programa recebe por linha de comando o caminho para um arquivo com a definição de um AFD no seguinte formato:
+
+<M>=({<q0>,...,<qn>},{<s1>,...,<sn>},Prog,<ini>,{ <f0>,...,<fn>})
+Prog
+(<q0>,<s1>)=<q1>
+...
+(<qn>,<sn>)=<q0>
+
+onde:
+< M >: nome dado ao autômato;
+< qi >: para 0 ≤ i ≤ n, com n ∈ N e n ≥ 0, representa um estado do autômato;
+< si >: para 1 ≤ i ≤ n, com n ∈ N e n ≥ 1, representa um símbolo do alfabeto da
+linguagem reconhecida pelo autômato;
+< ini >: indica o estado inicial do autômato, sendo que ini é um estado do autômato;
+< f i >: para 0 ≤ i ≤ n, com n ∈ N e n ≥ 0, representa um estado final do autômato,
+sendo que f i é um estado do autômato;
+(< qi >, < si >) = < qj >: descreve a função programa aplicada a um estado qi e um
+símbolo de entrada si que leva a computação a um estado qj.
+
+Sendo que se algum dos caracteres usados como separador na definição ('=', '(', ')', '{', '}', ',') é usado como um simbolo/estado deve ser usado
+uma contrabarra ('\') antes do simbolo para ele ser lido corretamente como um simbolo/estado na definição, já que foi definido que sempre que for
+encontrada uma contrabarra na leitura o próximo simbolo será lido como sendo parte da string. 
+
+O programa então constroi uma gramática linear unitária à direita equivalente a esse automato, sendo que diferente do algoritmo mostrado em 
+aula, e semelhante à forma como o JFLAP faz a conversão, não é criado um simbolo novo S para ser usado como simbolo inicial, já que esse
+simbolo S só teria uma produção que substitui S pelo simbolo que representa o estado inicial do automato, portanto não sendo necessario para
+o reconhecimento da linguagem.
+
+Após a criação do automato, o programa inicializa a interface shell para execução dos comandos
+    # - exit: sai do programa
+    # - word "<palavra>": le uma palavra via input
+    # - list <caminho>: le uma lista de palavras dada atraves de um caminho para um arquivo CSV
+Sendo que o arquivo CSV deve ter o seguinte formato:
+"<p1>","<p2>",....,"<pn>"
+
+As palavras testadas pelo programa, usando o comando list ou word, podem conter uma contrabarra que funciona como na leitura da definição do automato.
+
+'''
+
+
 import csv
 import argparse
 
 class GLUD:
     
-    # Construtor da classe
     def __init__(self):
+        '''Construtor da classe.'''
+
         # le o arquivo com a definição
         file_name = self.parse_args()
         lines = self.get_lines(file_name)
+        # le o nome do automato
+        lines[0] = self.read_string(lines[0],'=')[1]
         # le os estados, que serão as variaveis da gramatica
-        equals_pos = lines[0].find('=')
-        lines[0] = lines[0][equals_pos+1:].strip()[1:].strip()[1:].strip()
+        lines[0] = lines[0][lines[0].find('{') + 1:]
         self.variables, lines[0] = self.read_until_end_char(lines[0],'}')
         # le o alfabeto, que serão os simbolos terminais da gramatica
-        lines[0] = lines[0].strip()[1:].strip()[1:].strip()
+        lines[0] = lines[0][lines[0].find('{') + 1:]
         self.alphabet, lines[0] = self.read_until_end_char(lines[0],'}')
-        lines[0] = lines[0].strip()[1:].strip()
         # le o nome da fução programa
+        lines[0] = lines[0][lines[0].find(',') + 1:]
         self.prog, lines[0] = self.read_string(lines[0])
-        lines[0] = lines[0].strip()
         # le o simbolo inicial
         self.initial_symbol, lines[0] = self.read_string(lines[0])
-        lines[0] = lines[0].strip()[1:].strip()
         # le os estados finais
+        lines[0] = lines[0][lines[0].find('{') + 1:]
         self.final_states, lines[0] = self.read_until_end_char(lines[0],'}')
         # cria as produções do automato lendo a função
-        self.prod = self.read_function(lines)
-        # coloca as produções vazias necessarias na transformação para gramatica
+        self.prod = self.read_function(lines[2:])
+        # coloca as produções vazias necessarias na transformação para uma gramatica
         self.empty_prod()
 
-    # Retorna o nome do arquivo que foi passado como argumento na linha de comando
     def parse_args(self):
+      '''Retorna o nome do arquivo que foi passado como argumento na linha de comando.'''
       parser = argparse.ArgumentParser(description="Creates a grammar from a DFA")
       parser.add_argument("DFA", metavar="DFA", type=str, help="File to read DFA")
       return parser.parse_args().DFA
     
-    # Salva as linhas do arquivo
     def get_lines(self, file_name):
+        '''Retorna as linhas do arquivo em uma lista.'''
         with open(file_name) as input_file:
             lines = input_file.read().splitlines()
             return lines
 
-    # Le caracteres até marcador de fim
+    def read_string(self, line, separator = ','):
+        '''
+        Le uma string até que o separador seja encontrado ou a string termine.
+        Caso uma contrabarra seja encontrada, le o próximo simbolo como fazendo parte da string.
+        Retorna uma tupla com: 
+            A string lida, removendo os espaços em branco no inicio e no fim da string;
+            A substring que começa com o caractere após a leitura do separador até o fim da string passada como argumento.
+        Caso a string seja lida até o fim a substring será "".
+        '''
+        end_string = False
+        string = ""
+        i = 0
+        while(not end_string and i < len(line)): # enquanto não termina a string ou não encontra o separador le a string
+            symbol = line[i]
+            if(line[i] != '\\'): # se não for barra verifica se é o separador para terminar a leitura, e se não for o separador le o simbolo
+                if(line[i] == separator):
+                    end_string = True
+                else:
+                    string += symbol
+            else: # se é uma barra le o proximo simbolo
+                i += 1
+                symbol = line[i]
+                string += symbol
+
+            i += 1
+        return string.strip(), line[i:]
+
     def read_until_end_char(self, line, end_char):
+        '''
+        Le uma string até que o caractere de fim seja encontrado ou a string termine.
+        Considera a virgula (',') como separador dos simbolos.
+        Caso uma contrabarra seja encontrada, le o próximo simbolo como fazendo parte da string.
+        Retorna uma tupla com: 
+            A lista com as strings lidas, removendo os espaços em branco no inicio e no fim das strings;
+            A substring que começa com o caractere após a leitura do marcador de fim até o fim da string passada como argumento.
+        Caso a string seja lida até o fim a substring será "".
+        '''
         end_string = False
         string = ""
         lst = []
         i = 0
-        while(not end_string and i < len(line)): # enquanto não encontrar o marcador le o proximo simbolo
+        while(not end_string and i < len(line)): # enquanto não encontrar o marcador ou não terminar a string le o proximo simbolo
             symbol = line[i]
             if(line[i] != '\\'): # se não é barra 
                 if(line[i] == ','): # verifica se for virgula para colocar a string atual na lista e reseta a string
@@ -65,37 +151,30 @@ class GLUD:
 
             i += 1
 
+        if i == len(line): # se não encontrou o marcador, coloca a ultima string na lista.
+            lst.append(string.strip())
+
         return lst, line[i:]
 
-    # Le uma string verificando caracteres especiais
-    def read_string(self, line,separator = ','):
-        end_string = False
-        string = ""
-        i = 0
-        while(not end_string and i < len(line)): # enquanto não termina a string ou não encontra o marcador(',') le a string
-            symbol = line[i]
-            if(line[i] != '\\'): # se não for barra verifica se é o separador para  terminar a leitura, e se não for o separador le o simbolo
-                if(line[i] == separator):
-                    end_string = True
-                else:
-                    string += symbol
-            else: # se é uma barra le o proximo simbolo
-                i += 1
-                symbol = line[i]
-                string += symbol
-
-            i += 1
-        return string.strip(), line[i:]
-
-    # Le a funcao programa realizando os tratamentos necessarios de string
     def read_function(self,lines):
-        lines = lines[2:]
+        '''
+        Le a funcao programa realizando os tratamentos necessarios de string. Retorna um dicionario em que as chaves são as variaveis da gramatica e 
+        para cada variavel é armazenada uma lista com tuplas que representam as produções da seguinte forma:
+        
+        q0 : [(s1,q1),(s2,q2)...]
+
+        Considerando que na função programa temos:
+
+        (q0,s1)=q1
+        (q0,s2)=q2
+        '''
+
         prod = {}
-        for line in lines: #loop para cada (< qi >, < si >) = < qj > da função
+        for line in lines: # loop para cada (< qi >, < si >) = < qj > da função
             # leitura de (< qi >, < si >)
-            line = line.strip()[1:].strip()
+            line = line[line.find('(') + 1:]
             lst, line = self.read_until_end_char(line,')')  
-            line = line.strip()[1:].strip()
+            line = line[line.find('=') + 1:]
             # leitura de < qj >
             lst.append(self.read_string(line)[0])
             # adiciona a produção < qi > -> < si >< qj >
@@ -105,8 +184,11 @@ class GLUD:
                 
         return prod
     
-    # Define a lista de produções vazias
     def empty_prod(self):
+        '''
+        Adiciona as produções vazias à gramatica.
+        Para cada estado final é adicionado ('','') à lista de produções.
+        '''
         for state in self.final_states: # percorre a lista de estados finais para adicionar as produções F -> ε
             if not self.prod.get(state): # se não há nenhuma produção com o estado F, cria a lista de produções
                 self.prod[state] = []
