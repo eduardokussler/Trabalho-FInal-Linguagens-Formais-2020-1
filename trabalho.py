@@ -38,14 +38,15 @@ aula, e semelhante à forma como o JFLAP faz a conversão, não é criado um sim
 simbolo S só teria uma produção que substitui S pelo simbolo que representa o estado inicial do automato, portanto não sendo necessario para
 o reconhecimento da linguagem.
 
-Após a criação do automato, o programa inicializa a interface shell para execução dos comandos
+Após a criação do automato, o programa inicializa a interface shell para execução dos comandos:
     # - exit: sai do programa
-    # - word "<palavra>": le uma palavra via input
-    # - list <caminho>: le uma lista de palavras dada atraves de um caminho para um arquivo CSV
+    # - word "<palavra>": le uma palavra via input e imprime sua derivação caso a palavra seja aceita
+    # - list <caminho>: le uma lista de palavras dada atraves de um caminho para um arquivo CSV e mostra quais palavras são geradas pela gramatica
 Sendo que o arquivo CSV deve ter o seguinte formato:
 "<p1>","<p2>",....,"<pn>"
 
 As palavras testadas pelo programa, usando o comando list ou word, podem conter uma contrabarra que funciona como na leitura da definição do automato.
+A palavra vazia pode ser testada usando "".
 
 '''
 import csv
@@ -196,15 +197,16 @@ class GLUD:
   
     def shell(self):
         '''
-        Inicializa interface shell para execução dos comandos
+        Inicializa interface shell para execução dos comandos:
             # - exit: sai do programa
-            # - word "<palavra>": le uma palavra via input
-            # - list <caminho>: le uma lista de palavras dada atraves de um caminho para um arquivo CSV
+            # - word "<palavra>": le uma palavra via input e imprime sua derivação caso a palavra seja aceita
+            # - list <caminho>: le uma lista de palavras dada atraves de um caminho para um arquivo CSV e mostra quais palavras são geradas pela gramatica
         Sendo que o arquivo CSV deve ter o seguinte formato:
         "<p1>","<p2>",....,"<pn>"
 
         As palavras testadas pelo programa, usando o comando list ou word, podem conter uma contrabarra que funciona como 
         na leitura da definição do automato.
+        A palavra vazia pode ser testada usando "".
         '''
         while(True):
             string = input("$ ").strip()
@@ -228,10 +230,9 @@ class GLUD:
         '''
         accepted, derivation = self.check_word(word)
         if not accepted:
-            print("Palavra não aceita")
+            print("Palavra não pertence à linguagem")
         else:
-            print("Palavra aceita")
-            print("Derivação: ")
+            print("Palavra aceita, derivação: ", end = '')
             self.print_derivation(derivation)
 
     def check_word(self, word):
@@ -251,7 +252,9 @@ class GLUD:
             return False, None
 
         symbol_list.append('') # coloca '' para quando a palavra original for lida verificar se é possivel gerar a palavra vazia com a ultima variavel
-        derivation = [[self.initial_symbol]] # inicia a derivação com o simbolo inicial    
+        # inicia a derivação com o simbolo inicial
+        # a derivação é uma lista de listas em que cada sub-lista é um conjunto de simbolos que representa a string em um passo de derivação    
+        derivation = [[self.initial_symbol]]
         for symbol in symbol_list: # le os simbolos da palavra 
             # procura a lista de produções da variavel, se não encontrar então a palavra é rejeitada
             prod_list = self.prod.get(derivation[-1][-1])
@@ -290,7 +293,10 @@ class GLUD:
         return lst
     
     def print_derivation(self, derivation):
-        '''Printa a derivação da palavra dada como entrada.'''
+        '''
+        Printa a derivação da palavra dada como entrada. A derivação é uma lista de listas em que 
+        cada sub-lista é um conjunto de simbolos que representa a string em um passo de derivação    
+        '''
         print(derivation[0][0],end = '')
         for val in derivation[1:]:
             temp = "".join(val)
