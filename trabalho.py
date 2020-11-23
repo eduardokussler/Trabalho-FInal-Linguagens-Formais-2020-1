@@ -9,6 +9,9 @@ Turma: B
 Professor: Lucio Mauro Duarte
 
 Para executar o programa use: python3 trabalho.py <arquivo_definicao_AFD>
+O arquivo teste_original.csv contem as palavras mandadas na etapa 1 no formato para ser lido pelo programa.
+O arquivo formato_entrada_original.txt contem a definição do automato mandada na etapa1.
+
 
 O programa recebe por linha de comando o caminho para um arquivo com a definição de um AFD no seguinte formato:
 
